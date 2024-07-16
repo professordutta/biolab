@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molecular BioSciences Lab</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body class="bg-gray-50">
+    <header class="bg-gray-800 py-4 flex flex-col items-center">
+        <h1 class="text-gray-100 text-3xl text-center">Molecular BioSciences Lab</h1>
+        <img src="https://www.facultyplus.com/wp-content/uploads/2024/01/Manav-Rachna-Logo.jpg" alt="Logo" class="mt-4 h-24">
+    </header>
+    <main class="container mx-auto mt-8">
+        <div class="flex justify-center mt-8 mb-8">
+            <div id="ledStatus" class="flex items-center space-x-2">
+                <i data-feather="zap" id="ledBulb" class="w-8 h-8 text-gray-500"></i>
+                <span class="text-xl bg-gray-200 text-gray-800 px-4 py-2 rounded shadow">Checking...</span>
+            </div>
+        </div>
+        
+        <div class="flex justify-center space-x-4">
+            <button id="ledOnButton" class="bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white px-4 py-2 rounded shadow" onclick="sendGetRequest('https://api.thingspeak.com/update?api_key=C29Z8ACYUOIECEX4&field1=1')">LED On</button>
+            <button id="ledOffButton" class="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white px-4 py-2 rounded shadow" onclick="sendGetRequest('https://api.thingspeak.com/update?api_key=C29Z8ACYUOIECEX4&field1=0')">LED Off</button>
+        </div>
+        <div class="flex justify-center mt-4">
+            <a href="https://thingspeak.com/channels/227622" class="bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2 rounded shadow">Check Status Online</a>
+        </div>
+        <div class="flex justify-center mt-4">
+            <a href="https://thingspeak.com/channels/89895" class="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white px-4 py-2 rounded shadow">View Temp and Humidity</a>
+        </div>
+    </main>
+    <footer class="bg-gray-800 py-4 flex justify-center bottom-0 fixed w-full text-center">
+        <p class="text-gray-100">© 2024 Manav Rachna Innovation & Incubation Foundation. All rights reserved.</p>
+    </footer>
+    <script>
+        feather.replace();
+
+        var statusCheckInterval;
+
+        function sendGetRequest(url) {
+            clearInterval(statusCheckInterval);
+            document.querySelector('#ledStatus span').textContent = 'Loading...';
+
+            fetch(url, { method: 'GET' })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('GET request sent successfully');
+                    } else {
+                        console.error('Error sending GET request');
+                    }   
+                })
+                .catch(error => {
+                    console.error('Error sending GET request:', error);
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        fetchLEDStatus();
+                        statusCheckInterval = setInterval(fetchLEDStatus, 2000);
+                    }, 16000);
+                });
+        }
+
+        function fetchLEDStatus() {
+            fetch('https://api.thingspeak.com/channels/227622/fields/1.json?results=1')
+                .then(response => response.json())
+                .then(data => {
+                    const ledStatus = data.feeds[0].field1;
+                    const ledBulb = document.getElementById('ledBulb');
+                    const ledStatusText = ledStatus === '1' ? 'On' : 'Off';
+                    document.querySelector('#ledStatus span').textContent = `LED Status: ${ledStatusText}`;
+
+                    if (ledStatus === '1') {
+                        ledBulb.classList.remove('text-gray-500');
+                        ledBulb.classList.add('text-yellow-500');
+                        document.getElementById('ledOnButton').disabled = true;
+                        document.getElementById('ledOffButton').disabled = false;
+                    } else {
+                        ledBulb.classList.remove('text-yellow-500');
+                        ledBulb.classList.add('text-gray-500');
+                        document.getElementById('ledOnButton').disabled = false;
+                        document.getElementById('ledOffButton').disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching LED status:', error);
+                    document.querySelector('#ledStatus span').textContent = 'LED Status: Error';
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchLEDStatus);
+        statusCheckInterval = setInterval(fetchLEDStatus, 2000);
+    </script>
+</body>
+</html>
